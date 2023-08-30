@@ -42,7 +42,7 @@ class Simulation:
             self.agents.append(agent) # 加载agents
  
     def run(self): 
-        for _ in range(self.n_episode):  # 开始迭代
+        for episode_i in range(self.n_episode):  # 开始迭代
             states = self.env.reset()  # 每次迭代前重置环境
             for ag in self.agents:
                 ag.reset()
@@ -55,14 +55,14 @@ class Simulation:
                     actions.append(action)
                 link1_obs, reward_l1, l1_collision = self.env.step(actions)
                 
+                # 更新states
                 for i, ag in enumerate(self.agents):
                     ag.updateD2LT(get_id(reward_l1))
                     d_l1, d_l1_ = ag.normed_d2lt
                     next_states[i] = np.concatenate([states[i][6:], link1_obs[i], [d_l1, d_l1_]])
                 states = next_states.copy()
-        self.summary()
-    
-    def summary(self):
+            self.summary(episode_i)
+    def summary(self, k):
         l1_throughputs = []
         for ag in self.agents:
             l1_throughputs.append(return_throughput(ag.reward_log))   #agent[i] 吞吐量
@@ -71,8 +71,8 @@ class Simulation:
         
         mean1 = np.mean(round(l1_sum_throughput[-1000], 2))  # 最后逼近的值
 
-        print(mean1)
-        fig = plt.figure(figsize=(14, 6))
+        print(k, mean1)
+        fig = plt.figure(num=k,figsize=(14, 6))
         # plt.subplot(3, 1, 1)
         plt.plot(l1_sum_throughput, c='r', label='Sum')
         plt.plot(l1_throughputs[0], c='b', label='agent1')
@@ -91,7 +91,8 @@ class Simulation:
                 fontweight='bold',  # 字体粗细
                 color='red')  # 文本颜色
         plt.legend()
-        plt.show()
+        # plt.show()
+        plt.savefig(f"fig/episode{k}.png")
     
 
 if __name__ == "__main__":
@@ -107,6 +108,6 @@ if __name__ == "__main__":
     # "gamma": 0.95, 
     # "tau": 1e-2
     }
-    sim = Simulation(agent_params=agent_params)
+    sim = Simulation(agent_params=agent_params, n_episode=3)
     sim.run()
     
