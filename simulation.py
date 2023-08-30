@@ -1,9 +1,8 @@
-
 import numpy as np
 from env import env_SL
 from agent import Agent
 import torch 
-
+from tqdm import tqdm
 
 reward1_l1 = []
 reward2_l1 = []
@@ -80,7 +79,28 @@ class Simulation:
         d_l1, d_l1_ = np.zeros([env.agent_number, ]), np.zeros([env.agent_number, ])   # 小d是归一化vi和v-i
         D_l1 = np.zeros([env.agent_number, ])   
     def run(self):
-        
+        for _ in range(self.n_episode):  # 开始迭代
+            state1 = self.env.reset()  # 每次迭代前重置环境
+            next_state1 = state1.copy()
+            for t_i in tqdm(range(episode_length)):
+                actions1 = maddpg.take_action(state1, explore=False)  # 返回一个列表，里面有三个元素，分别表示三个agent的action数组
+
+                link1_obs, reward_l1, l1_collision = env.step(actions1)
+
+                # 更新D2LT
+                V_l1, V_l1_ = update_D2LT(reward_l1, env.agent_number, V_l1, V_l1_)
+
+                # 归一化Vi V-i得到d
+                d_l1, d_l1_ = normalize_D2LT(V_l1, V_l1_)
+                for i in range(env.agent_number):
+                    next_state1[i] = np.concatenate([state1[i][6:], link1_obs[i], [d_l1[i], d_l1_[i]]])
+
+                # 记录reward
+                reward1_l1.append(reward_l1[0])
+                reward2_l1.append(reward_l1[1])
+                reward3_l1.append(reward_l1[2])
+
+                state1 = next_state1.copy()
         pass
     
     def summary(self):
