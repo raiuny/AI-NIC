@@ -6,25 +6,26 @@ from tqdm import tqdm
 from typing import List
 import matplotlib.pyplot as plt
 
-def get_id(reward):
+def get_id(reward: np.ndarray):
     if np.sum(reward) == 0:
         return 0
     else:
-        return np.where(reward == 1)
+        return np.where(reward == 1)[0] + 1 # reward只有一个为1
+
+def return_throughput(rewards):
+    N = int(len(rewards)/50)
+    temp_sum = 0
+    throughput = []
+    for i in range(len(rewards)):
+        if i < N:
+            temp_sum += rewards[i]
+            throughput.append(temp_sum / (i+1))  #长度不满N时，平均值为除以i+1,LTT
+        else:
+            temp_sum += rewards[i] - rewards[i-N]
+            throughput.append(temp_sum / N)     #长度满N了，平均值就为总和除以N,STT
+    return throughput
 
 
-agent_params = {
-    "state_dim": 6*5, 
-    "action_dim": 2, 
-    "critic_input_dim": (6*5+2)*3, 
-    "hidden_dim_a": 64, 
-    "hidden_dim_c": 128,
-    "actor_lr": 5e-4, 
-    "critic_lr": 5e-4, 
-    "device": "cpu", 
-    # "gamma": 0.95, 
-    # "tau": 1e-2
-}
 MODEL_PATH = ['model/3node_SL_1.pt', 'model/3node_SL_2.pt', 'model/3node_SL_3.pt']
 
 class Simulation:
@@ -33,17 +34,17 @@ class Simulation:
         self.agent_number = agent_number
         self.n_episode = n_episode
         self.episode_length = episode_length
-        agent_params["critic_input_dim"] = agent_number * ( agent_params["action_dim"] + agent_params["state_dim"] )
         self.agents: List[Agent] = []
         for i in range(agent_number):
+            agent_params['id'] = i+1
             agent = Agent(**agent_params)
-            agent.actor.load_state_dict(torch.load(MODEL_PATH[i]))
+            agent.alg.load_state_dict(torch.load(MODEL_PATH[i]))
             self.agents.append(agent) # 加载agents
  
-    def run(self): # < 15:30
+    def run(self): 
         for _ in range(self.n_episode):  # 开始迭代
             states = self.env.reset()  # 每次迭代前重置环境
-            for ag in agents:
+            for ag in self.agents:
                 ag.reset()
             next_states = states.copy()
             # agent 重新初始化D2LT
@@ -55,27 +56,28 @@ class Simulation:
                 link1_obs, reward_l1, l1_collision = self.env.step(actions)
                 
                 for i, ag in enumerate(self.agents):
-                    ag.updateD2LT(reward_l1)
-                    d_l1, d_l1_ = ag.d2lt_norm()
-                    next_states[i] = np.concatenate([states[i][6:], link1_obs[i], [d_l1[i], d_l1_[i]]])
+                    ag.updateD2LT(get_id(reward_l1))
+                    d_l1, d_l1_ = ag.normed_d2lt
+                    next_states[i] = np.concatenate([states[i][6:], link1_obs[i], [d_l1, d_l1_]])
                 states = next_states.copy()
+        self.summary()
     
     def summary(self):
-        l1_throughput1 = return_throughput(reward1_l1)   #agent1吞吐量
-        l1_throughput2 = return_throughput(reward2_l1)   #agent2吞吐量
-        l1_throughput3 = return_throughput(reward3_l1)   # agent1吞吐量
-
-        l1_sum_throughput = [l1_throughput1[i] + l1_throughput2[i] + l1_throughput3[i]  for i in
-                                range(episode_length)]  # l1总吞吐量
-
+        l1_throughputs = []
+        for ag in self.agents:
+            l1_throughputs.append(return_throughput(ag.reward_log))   #agent[i] 吞吐量
+        l1_sum_throughput = [l1_throughputs[0][i] + l1_throughputs[1][i] + l1_throughputs[2][i]  for i in
+                                    range(self.episode_length)]  # l1总吞吐量
+        
         mean1 = np.mean(round(l1_sum_throughput[-1000], 2))  # 最后逼近的值
 
+        print(mean1)
         fig = plt.figure(figsize=(14, 6))
         # plt.subplot(3, 1, 1)
         plt.plot(l1_sum_throughput, c='r', label='Sum')
-        plt.plot(l1_throughput1, c='b', label='agent1')
-        plt.plot(l1_throughput2, c='cyan', label='agent2')
-        plt.plot(l1_throughput3, c='orange', label='agent3')
+        plt.plot(l1_throughputs[0], c='b', label='agent1')
+        plt.plot(l1_throughputs[1], c='cyan', label='agent2')
+        plt.plot(l1_throughputs[2], c='orange', label='agent3')
         # plt.plot(l1_throughput4, c='green', label='agent4')
         # plt.plot(l1_throughput5, c='yellow', label='agent5')
         plt.ylim((0, 1))
@@ -91,17 +93,20 @@ class Simulation:
         plt.legend()
         plt.show()
     
-    def return_throughput(rewards):
-        N = int(len(rewards)/50)
-        temp_sum = 0
-        throughput = []
-        for i in range(len(rewards)):
-            if i < N:
-                temp_sum += rewards[i]
-                throughput.append(temp_sum / (i+1))  #长度不满N时，平均值为除以i+1,LTT
-            else:
-                temp_sum += rewards[i] - rewards[i-N]
-                throughput.append(temp_sum / N)     #长度满N了，平均值就为总和除以N,STT
-        return throughput
-    
+
+if __name__ == "__main__":
+    agent_params = { # actor 网络参数
+    "state_dim": 6*5, 
+    "action_dim": 2, 
+    # "critic_input_dim": (6*5+2)*3, 
+    "hidden_dim_a": 64, 
+    # "hidden_dim_c": 128,
+    # "actor_lr": 5e-4, 
+    # "critic_lr": 5e-4, 
+    "device": "cpu", 
+    # "gamma": 0.95, 
+    # "tau": 1e-2
+    }
+    sim = Simulation(agent_params=agent_params)
+    sim.run()
     
