@@ -10,7 +10,7 @@ def get_id(reward: np.ndarray):
     if np.sum(reward) == 0:
         return 0
     else:
-        return np.where(reward == 1)[0] + 1 # reward只有一个为1
+        return np.where(reward == 1)[0] + 1 # reward列表中只有一个为1
 
 def return_throughput(rewards):
     N = int(len(rewards)/50)
