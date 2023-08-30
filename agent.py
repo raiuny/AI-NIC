@@ -3,36 +3,6 @@ import numpy as np
 from rl_utils import onehot_from_logits, gumbel_softmax
 from model import FCwithGRU
 
-def update_D2LT(reward,agent_number,V, V_):
-    '''
-    输入各个agent的reward来更新各个agent有多少个时隙没有传输了
-    param reward：各个agent的传输情况
-    param agent_number：多少个agent
-    param V_l1：上个时隙记录的l1上的各agent的D2LT
-    param V_l1_：上个时隙记录的l1上的v(-i)
-    '''
-    V = [x + 1 for x in V]  # 先所有D2LT加1，后续再对已经传输agent的赋0
-    V_ = [x + 1 for x in V_]
-    for i in range(agent_number):
-        if reward[i] == 1:  # 如果i号agent在link1上成功传输
-            V[i] = 0
-            temp = V_.copy()
-            V_ = np.zeros([agent_number, ])  # i号agent传输，则其余节点对应的v-i为0
-            V_[i] = temp[i]
-
-    return V, V_
-
-def normalize_D2LT(V, V_):
-    '''
-    输入D2LT V得到标准化的di和d-i
-    '''
-    LEN = len(V_)
-    d, d_ = np.zeros([LEN, ]),np.zeros([LEN, ]) # 初始化Di和D-i数组
-    for i in range(len(V)):
-        d[i] = V[i]/(V[i]+V_[i])
-        d_[i] = V_[i]/(V[i]+V_[i])
-    return d, d_
-
 # single agent actor网络 for simulation
 class Agent: # 训练使用MADDPG，测试时只需要使用actor而不需要critic
     def __init__(self, state_dim, action_dim, hidden_dim_a, device, id) -> None:
