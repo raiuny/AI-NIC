@@ -324,7 +324,7 @@ for _ in range(n_episode):  # 开始迭代
 
         # 更新D2LT
         V_l1, V_l1_ = update_D2LT(reward_l1, env.agent_number, V_l1, V_l1_)
-
+        print(V_l1, V_l1_, sep=' ### ')
         # 归一化Vi V-i得到d
         d_l1, d_l1_ = normalize_D2LT(V_l1, V_l1_)
         for i in range(env.agent_number):
