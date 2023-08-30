@@ -1,6 +1,8 @@
 from model import FCwithGRU, TwoLayerFC
 import torch 
 from rl_utils import gumbel_softmax, onehot_from_logits
+import numpy as np
+
 class DDPG:
     ''' DDPG算法,针对单个agent '''
     def __init__(self, state_dim, action_dim, critic_input_dim, hidden_dim_a,hidden_dim_c,
