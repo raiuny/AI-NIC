@@ -64,7 +64,7 @@ class Agent: # 训练使用MADDPG，测试时只需要使用actor而不需要cri
         if explore:
             action = gumbel_softmax(action)
         else:
-            action = onehot_from_logits(action, eps=0.0)
+            action = onehot_from_logits(action, eps=eps)
         # detach(): 返回一个新的Tensor，但返回的结果是没有梯度的;numpy()将tensor转变为数组；[0]相当于去掉一个[]
         self.last_action = action.detach().cpu().numpy()[0]
         return self.last_action

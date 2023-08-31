@@ -51,7 +51,7 @@ class Simulation:
             for t_i in tqdm(range(self.episode_length)):
                 actions = {} # 各个agents行为的汇总
                 for ag in self.agents:
-                    action = ag.take_action(explore=False) # 返回一个列表，里面有三个元素，分别表示三个agent的action数组
+                    action = ag.take_action(explore=False, eps=0.01) # 返回一个列表，里面有三个元素，分别表示三个agent的action数组
                     actions[ag.id] = action
                     # print(ag.states_mem, ag.last_action)
                 link_ret = self.env.step(actions) # 单链路返回值

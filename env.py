@@ -34,4 +34,6 @@ class env_SL(object):
         elif len(send_list) > 1: # 发生碰撞
             self.link_ret['occupy_id'] = -1
             return self.link_ret
-        return self.link_ret
+        else: # 空闲
+            self.link_ret['occupy_id'] = 0
+            return self.link_ret
