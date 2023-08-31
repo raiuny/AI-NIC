@@ -116,7 +116,7 @@ def gumbel_softmax(logits, temperature=1.0):
     return y
 
 
-def onehot_from_logits(logits, eps=0.01):
+def onehot_from_logits(logits, eps=0.01): # 有百分之1的概率产生随机动作
     ''' 生成最优动作的独热（one-hot）形式 '''
     argmax_acs = (logits == logits.max(1, keepdim=True)[0]).float()
     # 生成随机动作,转换成独热形式

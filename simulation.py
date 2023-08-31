@@ -30,7 +30,7 @@ MODEL_PATH = ['model/3node_SL_1.pt', 'model/3node_SL_2.pt', 'model/3node_SL_3.pt
 
 class Simulation:
     def __init__(self, agent_params, agent_number = 3, state_length_M = 5, n_episode = 1, episode_length = 40000) -> None:
-        self.env = env_SL(state_length=state_length_M)
+        self.env = env_SL()
         self.agent_number = agent_number
         self.n_episode = n_episode
         self.episode_length = episode_length
@@ -43,25 +43,24 @@ class Simulation:
  
     def run(self): 
         for episode_i in range(self.n_episode):  # 开始迭代
-            states = self.env.reset()  # 每次迭代前重置环境
+            # 每次迭代前重置agents, 重置环境
+            self.env.reset()
             for ag in self.agents:
                 ag.reset()
-            next_states = states.copy()
             # agent 重新初始化D2LT
             for t_i in tqdm(range(self.episode_length)):
-                actions = []
-                for ag, obs in zip(self.agents, states):
-                    action = ag.take_action(obs, explore=False) # 返回一个列表，里面有三个元素，分别表示三个agent的action数组
-                    actions.append(action)
-                link1_obs, reward_l1, l1_collision = self.env.step(actions)
+                actions = {} # 各个agents行为的汇总
+                for ag in self.agents:
+                    action = ag.take_action(explore=False) # 返回一个列表，里面有三个元素，分别表示三个agent的action数组
+                    actions[ag.id] = action
+                    # print(ag.states_mem, ag.last_action)
+                link_ret = self.env.step(actions) # 单链路返回值
                 
-                # 更新states
-                for i, ag in enumerate(self.agents):
-                    ag.updateD2LT(get_id(reward_l1))
-                    d_l1, d_l1_ = ag.normed_d2lt
-                    next_states[i] = np.concatenate([states[i][6:], link1_obs[i], [d_l1, d_l1_]])
-                states = next_states.copy()
+                # 根据链路返回值来更新各个agent的状态列表
+                for ag in self.agents:
+                    ag.update_states_mem(link_ret)
             self.summary(episode_i)
+            
     def summary(self, k):
         l1_throughputs = []
         for ag in self.agents:
@@ -105,9 +104,10 @@ if __name__ == "__main__":
     # "actor_lr": 5e-4, 
     # "critic_lr": 5e-4, 
     "device": "cpu", 
+    "memory_len": 5
     # "gamma": 0.95, 
     # "tau": 1e-2
     }
-    sim = Simulation(agent_params=agent_params, n_episode=3)
+    sim = Simulation(agent_params=agent_params, agent_number=3, n_episode=3)
     sim.run()
     
