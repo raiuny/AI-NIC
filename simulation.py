@@ -5,6 +5,7 @@ import torch
 from tqdm import tqdm
 from typing import List
 import matplotlib.pyplot as plt
+import random
 
 def get_id(reward: np.ndarray):
     if np.sum(reward) == 0:
@@ -35,10 +36,14 @@ class Simulation:
         self.n_episode = n_episode
         self.episode_length = episode_length
         self.agents: List[Agent] = []
+        agent_pid = [0, 1, 2]
+        # np.random.shuffle(agent_pid)
+        agent_pid = np.random.choice(agent_pid, size=agent_number)
+        print(agent_pid)
         for i in range(agent_number):
             agent_params['id'] = i+1
             agent = Agent(**agent_params)
-            agent.alg.load_state_dict(torch.load(MODEL_PATH[i]))
+            agent.alg.load_state_dict(torch.load(MODEL_PATH[agent_pid[i]]))
             self.agents.append(agent) # 加载agents
  
     def run(self): 
@@ -65,18 +70,16 @@ class Simulation:
         l1_throughputs = []
         for ag in self.agents:
             l1_throughputs.append(return_throughput(ag.reward_log))   #agent[i] 吞吐量
-        l1_sum_throughput = [l1_throughputs[0][i] + l1_throughputs[1][i] + l1_throughputs[2][i]  for i in
-                                    range(self.episode_length)]  # l1总吞吐量
+        l1_throughputs = np.array(l1_throughputs)
+        l1_sum_throughput = np.sum(l1_throughputs, axis=0) # l1总吞吐量
         
         mean1 = np.mean(round(l1_sum_throughput[-1000], 2))  # 最后逼近的值
 
         print(k, mean1)
         fig = plt.figure(num=k,figsize=(14, 6))
-        # plt.subplot(3, 1, 1)
         plt.plot(l1_sum_throughput, c='r', label='Sum')
-        plt.plot(l1_throughputs[0], c='b', label='agent1')
-        plt.plot(l1_throughputs[1], c='cyan', label='agent2')
-        plt.plot(l1_throughputs[2], c='orange', label='agent3')
+        for i in range(len(l1_throughputs)):
+            plt.plot(l1_throughputs[i], label='agent'+str(i+1))
         # plt.plot(l1_throughput4, c='green', label='agent4')
         # plt.plot(l1_throughput5, c='yellow', label='agent5')
         plt.ylim((0, 1))
@@ -89,7 +92,7 @@ class Simulation:
                 fontsize=18,  # 文本大小
                 fontweight='bold',  # 字体粗细
                 color='red')  # 文本颜色
-        plt.legend()
+        plt.legend(loc="lower left")
         # plt.show()
         plt.savefig(f"fig/episode{k}.png")
     
