@@ -56,7 +56,7 @@ class Agent: # 训练使用MADDPG，测试时只需要使用actor而不需要cri
         self.states_mem = np.concatenate([self.states_mem[6:], link_obs, self.normed_d2lt])
             
             
-    def take_action(self, explore=False):
+    def take_action(self, explore=False, eps=0.001):
         ''' eps表示随机动作生成的概率，默认为0.0%'''
         # 读取各个agent的state,并转变格式
         obs = torch.tensor(np.array([self.states_mem]), dtype=torch.float, device=self.device)
@@ -64,7 +64,7 @@ class Agent: # 训练使用MADDPG，测试时只需要使用actor而不需要cri
         if explore:
             action = gumbel_softmax(action)
         else:
-            action = onehot_from_logits(action, eps=0.001)
+            action = onehot_from_logits(action, eps=0.01)
         # detach(): 返回一个新的Tensor，但返回的结果是没有梯度的;numpy()将tensor转变为数组；[0]相当于去掉一个[]
         self.last_action = action.detach().cpu().numpy()[0]
         return self.last_action
