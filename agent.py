@@ -30,8 +30,8 @@ class Agent: # 训练使用MADDPG，测试时只需要使用actor而不需要cri
     def normed_d2lt(self):
         ret = [0.0, 0.0]
         sum = self.D2LT[0] + self.D2LT[1]
-        ret[0] = self.D2LT[0] / (sum + 1e-12)
-        ret[1] = self.D2LT[1] / (sum + 1e-12)
+        ret[0] = self.D2LT[0] / (sum + 1e-9)
+        ret[1] = self.D2LT[1] / (sum + 1e-9)
         return ret
     
     
@@ -49,10 +49,10 @@ class Agent: # 训练使用MADDPG，测试时只需要使用actor而不需要cri
         elif self.last_action[1] == 1: # 时隙开始时，发送了消息
             if link_ret['occupy_id'] == self.id: # 自己发送成功
                 link_obs = self.STATES[0]
-            elif link_ret['occupy_id'] > 0:
-                link_obs = self.STATES[1] # 别人发送成功
-            else:
+            elif link_ret['occupy_id'] < 0:
                 link_obs = self.STATES[2] # 碰撞
+            else:
+                exit()
         self.states_mem = np.concatenate([self.states_mem[6:], link_obs, self.normed_d2lt])
             
             
@@ -64,7 +64,7 @@ class Agent: # 训练使用MADDPG，测试时只需要使用actor而不需要cri
         if explore:
             action = gumbel_softmax(action)
         else:
-            action = onehot_from_logits(action, eps=0.01)
+            action = onehot_from_logits(action, eps=0.0)
         # detach(): 返回一个新的Tensor，但返回的结果是没有梯度的;numpy()将tensor转变为数组；[0]相当于去掉一个[]
         self.last_action = action.detach().cpu().numpy()[0]
         return self.last_action
